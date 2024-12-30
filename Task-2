@@ -1,0 +1,62 @@
+import requests
+from bs4 import BeautifulSoup
+
+def test_sql_injection(url, param_name):
+    payloads = ["' OR '1'='1", "' OR '1'='1' --", "' OR 1=1 --"]
+    for payload in payloads:
+        params = {param_name: payload}
+        try:
+            response = requests.get(url, params=params, timeout=5)
+            if "SQL syntax" in response.text or "database error" in response.text:
+                print(f"Potential SQL Injection vulnerability detected with payload: {payload}")
+        except requests.RequestException as e:
+            print(f"Error testing SQL Injection: {e}")
+
+def test_xss(url, param_name):
+    payloads = [
+        "<script>alert('XSS')</script>",
+        "<img src=x onerror=alert('XSS')>",
+    ]
+    for payload in payloads:
+        params = {param_name: payload}
+        try:
+            response = requests.get(url, params=params, timeout=5)
+            if payload in response.text:
+                print(f"Potential XSS vulnerability detected with payload: {payload}")
+        except requests.RequestException as e:
+            print(f"Error testing XSS: {e}")
+
+def test_insecure_authentication(url, username, password):
+    try:
+        response = requests.post(url, data={"username": username, "password": password}, timeout=5)
+        if "Invalid username or password" not in response.text:
+            print("Potential weak or insecure authentication detected. Verify login success handling.")
+        else:
+            print("Authentication seems secure.")
+    except requests.RequestException as e:
+        print(f"Error testing authentication: {e}")
+
+def main():
+    target_url = input("Enter the target URL (e.g., http://example.com): ")
+    print("Choose a test type:")
+    print("1. SQL Injection")
+    print("2. XSS")
+    print("3. Insecure Authentication")
+    
+    choice = input("Enter your choice (1/2/3): ")
+    
+    if choice == "1":
+        param_name = input("Enter the parameter name to test for SQL Injection: ")
+        test_sql_injection(target_url, param_name)
+    elif choice == "2":
+        param_name = input("Enter the parameter name to test for XSS: ")
+        test_xss(target_url, param_name)
+    elif choice == "3":
+        username = input("Enter the username to test: ")
+        password = input("Enter the password to test: ")
+        test_insecure_authentication(target_url, username, password)
+    else:
+        print("Invalid choice.")
+
+if __name__ == "__main__":
+    main()
